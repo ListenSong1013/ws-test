@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "socket.io test app",
   "dependencies": {
+    "colors": "^1.1.0",
     "express": "4.10.2",
     "socket.io": "1.2.0",
     "underscore": "^1.8.3"

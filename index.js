@@ -3,58 +3,61 @@ var app = express();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var _ = require('underscore');
+require('colors');
 
-var serverHash = [];
-var clientHash = [];
+var clientHash = {};
+var connectHash = {};
 
 // Routing
-app.use(express.static(__dirname + '/public'));
+// app.use(express.static(__dirname + '/public'));
 
-app.get('/server', function(req, res){
-  res.sendFile(__dirname + '/server.html');
-});
-
-app.get('/client', function(req, res){
-  res.sendFile(__dirname + '/client.html');
-});
-
-io.on('connection', function(socket){
-  socket.on('chat message', function(msg){
-    io.emit('chat message', msg);
-  });
-});
+// io.on('connection', function(socket){
+//   socket.on('chat message', function(msg){
+//     io.emit('chat message', msg);
+//   });
+// });
 
 http.listen(3000, function(){
-  console.log('listening on *:3000');
+  console.log('server start -->listening on *:3000'.green);
 });
 
 
-var ServerSocket = io.of('server');
 var ClientSocket = io.of('client');
 
-ServerSocket.on('connection', serverConnectCb);
 ClientSocket.on('connection', clientConnectCb);
 
-function serverConnectCb(socket){
-    console.log('con ServerSocket socket\'id:', socket.id);
-    serverHash.push(socket.id);
-
-    socket.on('disconnect', function(){
-        console.log('dis ServerSocket socket\'id:', socket.id);
-        serverHash = _.without(serverHash, socket.id);
-        console.log(serverHash);
-    });
-}
-
 function clientConnectCb (socket){
-    console.log('con ClientSocket socket\'id:', socket.id);
-    clientHash.push(socket.id);
+  var socket_id = socket.id;
+  var socket_query = socket.handshake.query;
+  console.log('con ClientSocket socket\'id and query:'.yellow, socket_id, socket_query);
+  var username = socket_query.username;
 
-    socket.on('disconnect', function(){
-        console.log('dis ClientSocket socket\'id:', socket.id);
-        clientHash = _.without(clientHash, socket.id);
-        console.log(clientHash);
+  socket.emit('client list', clientHash, function(ret){
+    console.log('client list ack:'.yellow + ret);
+  });
+
+
+  console.log(clientHash)
+  _.each(clientHash, function(item, index){
+    ClientSocket.connected[index].emit('client online', {id:socket_id,username: username} , function(ret){
+      console.log('client online ack:'.yellow + ret);
     });
+  });
+
+  clientHash[socket_id] = username;
+  connectHash[socket_id] = socket;
+
+  socket.on('disconnect', function(){
+      console.log('dis ClientSocket socket\'id:', socket.id);
+      delete clientHash[socket_id];
+      delete connectHash[socket_id];
+
+      _.each(clientHash, function(item, index){
+        ClientSocket.connected[index].emit('client offline', {id:socket_id,username: username} , function(ret){
+          console.log('client online ack:'.yellow + ret);
+        });
+      });
+  });
 }
 
 

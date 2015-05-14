@@ -16,22 +16,52 @@
   </head>
   <body>
     <h1>client</h1>
+    <div id="user-list">
+    </div>
     <ul id="messages"></ul>
     <form action="">
       <input id="m" autocomplete="off" /><button>Send</button>
     </form>
     <script src="/socket.io.js"></script>
-    <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+    <script src="jquery-2.1.4.min.js"></script>
+
     <script>
-      var socket = io('http://localhost:3000/client');
-      $('form').submit(function(){server
-        socket.emit('chat message', $('#m').val());
-        $('#m').val('');
-        return false;
+      function numCode() {
+          var digit = Math.floor(Math.random()*100000);
+          if(digit<10000){
+              digit = (digit + 10000);
+          }
+          return digit;
+      }
+
+      var username = '用户' + numCode();
+      $('h1').text(username);
+
+      var socket = io('http://localhost:3000/client', { query: "username=" + username });
+
+      socket.on('client list', function(data, callback) {
+        console.log('client list------>', data);
+        callback('success');
+        var html = ''
+        for(var i in data) {
+          html = html + '<label id="' + i + '"><input type="checkbox" name="">'  + data[i] + ' <br /></label>'
+        }
+        $('#user-list').html(html);
       });
-      socket.on('chat message', function(msg){
-        $('#messages').append($('<li>').text(msg));
+
+      socket.on('client online', function(data, callback) {
+        console.log('online---->', data);
+        $('#user-list').append('<label id="' + data.id + '"><input type="checkbox" name="">'  + data.username + ' <br /></label>');
+        callback('success');
       });
+
+      socket.on('client offline', function(data, callback) {
+        console.log('offline---->', data);
+        $('#user-list').find('label#' + data.id).remove();
+        callback('success');
+      });
+
+
     </script>
   </body>
 </html>
