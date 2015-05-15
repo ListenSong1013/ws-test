@@ -4,6 +4,7 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var _ = require('underscore');
 require('colors');
+var bodyParser = require('body-parser');
 
 var clientHash = {};
 var connectHash = {};
@@ -21,6 +22,18 @@ http.listen(3000, function(){
   console.log('server start -->listening on *:3000'.green);
 });
 
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
+
+app.use(function(req, res, next) {
+    res.set({
+        'Access-Control-Allow-Origin': '*',
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+    });
+    next();
+});
 
 var ClientSocket = io.of('client');
 
@@ -48,17 +61,44 @@ function clientConnectCb (socket){
   connectHash[socket_id] = socket;
 
   socket.on('disconnect', function(){
-      console.log('dis ClientSocket socket\'id:', socket.id);
-      delete clientHash[socket_id];
-      delete connectHash[socket_id];
+    console.log('dis ClientSocket socket\'id:', socket.id);
+    delete clientHash[socket_id];
+    delete connectHash[socket_id];
 
-      _.each(clientHash, function(item, index){
-        ClientSocket.connected[index].emit('client offline', {id:socket_id,username: username} , function(ret){
-          console.log('client online ack:'.yellow + ret);
-        });
+    _.each(clientHash, function(item, index){
+      ClientSocket.connected[index].emit('client offline', {id:socket_id,username: username, } , function(ret){
+        console.log('client online ack:'.yellow + ret);
       });
+    });
   });
 }
+
+
+app.post('/client/sendMsg', function(req, res){
+    var content = req.body.content;
+    var socketIds = req.body.socketIds || [];
+    var selfId = req.body.selfId;
+
+    var ids = [];
+    var resObj = {username: clientHash[selfId], content: content};
+
+    if(socketIds.length == 0) {
+      var allKeys = Object.keys(clientHash);
+      ids = _.without(allKeys, selfId);
+    } else {
+      ids = socketIds;
+    }
+    console.log('ids-->', ids)
+    if(ids.length > 0) {
+        _.each(ids, function(id){
+          ClientSocket.connected[id].emit('client message', resObj, function(ret){
+            console.log('client message ack:'.yellow + ret);
+          });
+        })
+    }
+
+    res.send({success: true});
+});
 
 
 

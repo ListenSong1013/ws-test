@@ -12,6 +12,9 @@
       #messages li { padding: 5px 10px; }
       #messages li:nth-child(odd) { background: #eee; }
       h1 {width:100%;text-align: center;}
+      #user-list {margin-bottom: 50px;
+  font-size: 18px;
+  color: #999;}
     </style>
   </head>
   <body>
@@ -20,7 +23,7 @@
     </div>
     <ul id="messages"></ul>
     <form action="">
-      <input id="m" autocomplete="off" /><button>Send</button>
+      <input id="m" autocomplete="off" /><button id="send">Send</button>
     </form>
     <script src="/socket.io.js"></script>
     <script src="jquery-2.1.4.min.js"></script>
@@ -44,14 +47,14 @@
         callback('success');
         var html = ''
         for(var i in data) {
-          html = html + '<label id="' + i + '"><input type="checkbox" name="">'  + data[i] + ' <br /></label>'
+          html = html + '<label id="' + i + '"><input type="checkbox" name="user">'  + data[i] + ' <br /></label>'
         }
         $('#user-list').html(html);
       });
 
       socket.on('client online', function(data, callback) {
         console.log('online---->', data);
-        $('#user-list').append('<label id="' + data.id + '"><input type="checkbox" name="">'  + data.username + ' <br /></label>');
+        $('#user-list').append('<label id="' + data.id + '"><input type="checkbox" name="user">'  + data.username + ' <br /></label>');
         callback('success');
       });
 
@@ -61,7 +64,26 @@
         callback('success');
       });
 
+      socket.on('client message', function(data, callback){
+        console.log('client message---->', data);
+        $('#messages').append($('<li>').text(data.username + ':' +data.content));
+        callback && callback(true);
+      });
 
-    </script>
+      $('#send').click(function(){
+        var content = $('#m').val();
+        if(!content) return false;
+        var socketIds = [];
+        $('input[name=user]:checked').map(function() {
+            socketIds.push($(this).parent().attr('id'));
+        });
+        console.log(socketIds.join(','))
+        $.post('http://localhost:3000/client/sendMsg', {content: content, socketIds:socketIds, selfId: socket.id},function(ret) {
+          $('#m').val('');
+        });
+        $('#messages').append($('<li>').text('我:' + content));
+        return false;
+      });
+      </script>
   </body>
 </html>

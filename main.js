@@ -12,6 +12,9 @@ app.get('/client', function(req, res){
   res.sendFile(__dirname + '/client.html');
 });
 
+
+
 http.listen(8000, function(){
   console.log('server start -->listening on *:8000');
 });
+
